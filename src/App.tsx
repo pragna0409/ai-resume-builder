@@ -12,6 +12,8 @@ import ResumeBuilder from './pages/ResumeBuilder';
 import SkillTest from './pages/SkillTest';
 import CareerPath from './pages/CareerPath';
 import JobRecommendations from './pages/JobRecommendations';
+import ViewProfile from './pages/ViewProfile';
+import EditProfile from './pages/EditProfile';
 
 function App() {
   return (
@@ -29,6 +31,8 @@ function App() {
           <Route path="/skill-test" element={<SkillTest />} />
           <Route path="/career-path" element={<CareerPath />} />
           <Route path="/jobs" element={<JobRecommendations />} />
+          <Route path="/profile" element={<ViewProfile />} />
+          <Route path="/profile/edit" element={<EditProfile />} />
         </Routes>
         <Toaster 
           position="top-right"

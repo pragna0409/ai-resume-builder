@@ -19,7 +19,7 @@ router.post('/register', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password, first_name, last_name, phone } = req.body;
+    const { email, password, first_name, last_name, phone, profile_picture } = req.body;
 
     // Check if user already exists
     const [existingUsers] = await pool.execute(
@@ -34,10 +34,10 @@ router.post('/register', [
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Insert new user
+    // Insert new user with all fields
     const [result] = await pool.execute(
-      'INSERT INTO users (email, password, first_name, last_name, phone) VALUES (?, ?, ?, ?, ?)',
-      [email, hashedPassword, first_name, last_name, phone]
+      'INSERT INTO users (email, password, first_name, last_name, phone, profile_picture) VALUES (?, ?, ?, ?, ?, ?)',
+      [email, hashedPassword, first_name, last_name, phone || null, profile_picture || null]
     );
 
     // Create user profile
@@ -56,7 +56,9 @@ router.post('/register', [
         id: result.insertId,
         email,
         first_name,
-        last_name
+        last_name,
+        phone: phone || null,
+        profile_picture: profile_picture || null
       }
     });
   } catch (error) {
@@ -80,7 +82,7 @@ router.post('/login', [
 
     // Get user
     const [users] = await pool.execute(
-      'SELECT id, email, password, first_name, last_name FROM users WHERE email = ?',
+      'SELECT id, email, password, first_name, last_name, phone, profile_picture FROM users WHERE email = ?',
       [email]
     );
 
@@ -106,7 +108,9 @@ router.post('/login', [
         id: user.id,
         email: user.email,
         first_name: user.first_name,
-        last_name: user.last_name
+        last_name: user.last_name,
+        phone: user.phone,
+        profile_picture: user.profile_picture
       }
     });
   } catch (error) {

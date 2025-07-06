@@ -1,14 +1,46 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Brain, User, LogOut } from 'lucide-react';
 
+const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff';
+
 const Navbar: React.FC = () => {
   const location = useLocation();
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState<any>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const isAuthenticated = !!localStorage.getItem('token');
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetch('http://localhost:5000/api/users/profile', {
+        headers: {
+          Authorization: 'Bearer ' + localStorage.getItem('token')
+        }
+      })
+        .then(res => res.json())
+        .then(data => setProfile(data.profile || data.user || null));
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [dropdownOpen]);
 
   const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('token');
     window.location.href = '/';
   };
 
@@ -59,13 +91,40 @@ const Navbar: React.FC = () => {
                 >
                   Jobs
                 </Link>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-red-600/20 transition-all duration-300"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>Logout</span>
-                </button>
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setDropdownOpen(v => !v)}
+                    className="flex items-center space-x-2 px-2 py-1 rounded-full hover:bg-white/10 transition-all duration-300 focus:outline-none"
+                  >
+                    <img
+                      src={profile?.profile_picture || DEFAULT_AVATAR}
+                      alt="Profile"
+                      className="w-9 h-9 rounded-full object-cover border-2 border-blue-400"
+                    />
+                  </button>
+                  {dropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
+                      <button
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                        onClick={() => { setDropdownOpen(false); navigate('/profile'); }}
+                      >
+                        View Profile
+                      </button>
+                      <button
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                        onClick={() => { setDropdownOpen(false); navigate('/profile/edit'); }}
+                      >
+                        Edit Profile
+                      </button>
+                      <button
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600 flex items-center"
+                        onClick={handleLogout}
+                      >
+                        <LogOut className="h-4 w-4 mr-2" /> Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <>

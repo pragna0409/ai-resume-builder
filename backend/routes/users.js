@@ -7,19 +7,33 @@ const router = express.Router();
 // Get user profile
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
-    const [profiles] = await pool.execute(
-      `SELECT up.*, u.email, u.first_name, u.last_name, u.phone, u.profile_picture
-       FROM user_profiles up
-       JOIN users u ON up.user_id = u.id
-       WHERE up.user_id = ?`,
+    // First get user data
+    const [users] = await pool.execute(
+      'SELECT id, email, first_name, last_name, phone, profile_picture, created_at, updated_at FROM users WHERE id = ?',
       [req.user.id]
     );
 
-    if (profiles.length === 0) {
-      return res.status(404).json({ error: 'Profile not found' });
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({ profile: profiles[0] });
+    const user = users[0];
+
+    // Then get profile data
+    const [profiles] = await pool.execute(
+      'SELECT * FROM user_profiles WHERE user_id = ?',
+      [req.user.id]
+    );
+
+    const profile = profiles.length > 0 ? profiles[0] : null;
+
+    // Combine user and profile data
+    const combinedData = {
+      ...user,
+      ...profile
+    };
+
+    res.json({ profile: combinedData });
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ error: 'Failed to get profile' });
@@ -38,19 +52,48 @@ router.put('/profile', authenticateToken, async (req, res) => {
       github_url,
       years_of_experience,
       current_salary,
-      desired_salary
+      desired_salary,
+      phone,
+      profile_picture,
+      first_name,
+      last_name
     } = req.body;
 
+    // Check if profile exists
+    const [profiles] = await pool.execute(
+      'SELECT id FROM user_profiles WHERE user_id = ?',
+      [req.user.id]
+    );
+
+    if (profiles.length === 0) {
+      // Create new profile if it doesn't exist
+      await pool.execute(
+        `INSERT INTO user_profiles (user_id, headline, summary, location, website, linkedin_url, github_url, years_of_experience, current_salary, desired_salary)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.user.id, headline, summary, location, website, linkedin_url,
+          github_url, years_of_experience, current_salary, desired_salary
+        ]
+      );
+    } else {
+      // Update existing profile
+      await pool.execute(
+        `UPDATE user_profiles SET
+         headline = ?, summary = ?, location = ?, website = ?,
+         linkedin_url = ?, github_url = ?, years_of_experience = ?,
+         current_salary = ?, desired_salary = ?
+         WHERE user_id = ?`,
+        [
+          headline, summary, location, website, linkedin_url,
+          github_url, years_of_experience, current_salary, desired_salary, req.user.id
+        ]
+      );
+    }
+
+    // Update users table for phone, profile_picture, first_name, last_name
     await pool.execute(
-      `UPDATE user_profiles SET
-       headline = ?, summary = ?, location = ?, website = ?,
-       linkedin_url = ?, github_url = ?, years_of_experience = ?,
-       current_salary = ?, desired_salary = ?
-       WHERE user_id = ?`,
-      [
-        headline, summary, location, website, linkedin_url,
-        github_url, years_of_experience, current_salary, desired_salary, req.user.id
-      ]
+      `UPDATE users SET phone = ?, profile_picture = ?, first_name = ?, last_name = ? WHERE id = ?`,
+      [phone, profile_picture, first_name, last_name, req.user.id]
     );
 
     res.json({ message: 'Profile updated successfully' });

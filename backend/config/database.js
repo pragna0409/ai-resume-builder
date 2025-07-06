@@ -4,7 +4,7 @@ require('dotenv').config();
 const dbConfig = {
   host: 'localhost',
   user: 'root',
-  password: 'admin123',
+  password: '',
   database: 'ai_resume_builder',
   port: 3306,
   waitForConnections: true,

@@ -16,17 +16,21 @@ import {
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [userName, setUserName] = useState('');
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem('isAuthenticated');
-    if (!isAuthenticated) {
+    const token = localStorage.getItem('token');
+    if (!token) {
       navigate('/login');
       return;
     }
-    
-    const name = localStorage.getItem('userName') || 'User';
-    setUserName(name);
+    fetch('http://localhost:5000/api/users/profile', {
+      headers: {
+        Authorization: 'Bearer ' + token
+      }
+    })
+      .then(res => res.json())
+      .then(data => setProfile(data.profile || data.user || null));
   }, [navigate]);
 
   const stats = [
@@ -74,6 +78,8 @@ const Dashboard: React.FC = () => {
     { action: 'Earned React Certification', time: '3 days ago', icon: <Award className="h-5 w-5 text-yellow-400" /> },
   ];
 
+  if (!profile) return <div className="min-h-screen pt-20 px-4 text-center text-white">Loading...</div>;
+
   return (
     <div className="min-h-screen pt-20 px-4">
       <div className="max-w-7xl mx-auto">
@@ -85,7 +91,7 @@ const Dashboard: React.FC = () => {
           className="mb-8"
         >
           <h1 className="text-4xl font-bold mb-2">
-            Welcome back, <span className="gradient-text">{userName}</span>! 👋
+            Welcome back, <span className="gradient-text">{profile.first_name} {profile.last_name}</span>! 👋
           </h1>
           <p className="text-gray-300 text-lg">
             Ready to take your career to the next level? Let's continue building your future.
